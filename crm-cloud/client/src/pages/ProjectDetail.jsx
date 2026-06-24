@@ -4,7 +4,7 @@ import { ArrowLeft, Plus, Upload, Download } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import api, { apiErrorMessage } from '../api/client.js';
+import api, { apiErrorMessage, downloadAuthedFile } from '../api/client.js';
 
 const STATUSES = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
 const TASK_STATUSES = ['Pending', 'Ongoing', 'Completed'];
@@ -184,7 +184,7 @@ export default function ProjectDetail() {
                 <p className="text-sm text-ink-700 dark:text-ink-200">{f.file_name}</p>
                 <p className="text-xs text-ink-400">{f.category} · {f.uploaded_by_name}</p>
               </div>
-              <a href={`/api/files/${f.id}/download`} target="_blank" rel="noreferrer" className="btn-secondary !px-3 !py-1.5"><Download size={14} /></a>
+              <button onClick={() => downloadAuthedFile(`/files/${f.id}/download`, f.file_name)} className="btn-secondary !px-3 !py-1.5"><Download size={14} /></button>
             </div>
           ))}
         </div>

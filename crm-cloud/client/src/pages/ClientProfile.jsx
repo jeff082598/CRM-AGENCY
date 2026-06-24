@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, FileText, Download } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import api from '../api/client.js';
+import api, { downloadAuthedFile } from '../api/client.js';
 
 const TABS = ['Overview', 'Projects', 'Payments & Invoices', 'Files', 'Activity'];
 
@@ -148,9 +148,9 @@ export default function ClientProfile() {
                 <p className="text-sm text-ink-700 dark:text-ink-200">{f.file_name}</p>
                 <p className="text-xs text-ink-400">{f.category} · uploaded by {f.uploaded_by_name || 'Unknown'} on {new Date(f.uploaded_at).toLocaleDateString()}</p>
               </div>
-              <a href={`/api/files/${f.id}/download`} target="_blank" rel="noreferrer" className="btn-secondary !px-3 !py-1.5">
+              <button onClick={() => downloadAuthedFile(`/files/${f.id}/download`, f.file_name)} className="btn-secondary !px-3 !py-1.5">
                 <Download size={14} />
-              </a>
+              </button>
             </div>
           ))}
         </div>

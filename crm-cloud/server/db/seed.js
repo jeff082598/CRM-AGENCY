@@ -53,6 +53,9 @@ async function seed() {
     tax_percent: '0',
     theme: 'light',
     lead_categories: JSON.stringify(['Hot Lead', 'Warm Lead', 'Cold Lead']),
+    shift_start_time: '09:00',
+    late_grace_minutes: '0',
+    target_work_hours: '8',
   };
   for (const [k, v] of Object.entries(settingDefaults)) {
     await pool.query(

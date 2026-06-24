@@ -10,6 +10,8 @@ const TITLES = {
   '/projects': 'Projects',
   '/tasks': 'Tasks',
   '/services': 'Service Catalog',
+  '/time-clock': 'Time Clock',
+  '/attendance': 'Attendance',
   '/payments': 'Payments',
   '/invoices': 'Invoices',
   '/files': 'Files & Documents',

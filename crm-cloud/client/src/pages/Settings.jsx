@@ -103,6 +103,25 @@ export default function Settings() {
         </div>
       </div>
 
+      <div className="card p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Attendance Settings</h3>
+        <p className="text-xs text-ink-400">These control the green/red indicators on the Attendance page — set them to match your actual policy.</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="label">Shift Start Time</label>
+            <input className="input" type="time" value={settings.shift_start_time || '09:00'} onChange={(e) => update('shift_start_time', e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Grace Period (min)</label>
+            <input className="input" type="number" min="0" value={settings.late_grace_minutes ?? '0'} onChange={(e) => update('late_grace_minutes', e.target.value)} />
+          </div>
+          <div>
+            <label className="label">Target Hours/Day</label>
+            <input className="input" type="number" min="0" step="0.5" value={settings.target_work_hours || '8'} onChange={(e) => update('target_work_hours', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
       <button className="btn-primary" onClick={save}><Save size={16} /> {saved ? 'Saved!' : 'Save Settings'}</button>
 
       <div className="card p-5 space-y-3">

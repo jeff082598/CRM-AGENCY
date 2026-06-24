@@ -16,6 +16,13 @@ That walks through everything: a free database (Neon), free hosting
 
 ## What changed from the desktop edition
 
+- **Time Clock / Attendance (new):** every staff member gets a "Time Clock"
+  page with just a Clock In / Clock Out button and a read-only history of
+  their own hours — they cannot edit a recorded time themselves, by
+  design. Admins get an "Attendance" page showing everyone's hours, with
+  full edit/add/delete control, a green badge once a day's total hours
+  meet your configured target, and a red badge with the exact number of
+  minutes late based on a shift-start-time you set in Settings.
 - **Database:** PostgreSQL (shared, lives on a server) instead of SQLite
   (local file, one computer only). All the same data, same relationships
   — just upgraded to handle multiple people reading/writing at once.

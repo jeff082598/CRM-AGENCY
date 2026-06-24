@@ -20,6 +20,8 @@ import Files from './pages/Files.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import UsersPage from './pages/Users.jsx';
+import TimeClock from './pages/TimeClock.jsx';
+import Attendance from './pages/Attendance.jsx';
 
 export default function App() {
   return (
@@ -44,6 +46,8 @@ export default function App() {
         <Route path="tasks" element={<Tasks />} />
         <Route path="services" element={<Services />} />
         <Route path="files" element={<Files />} />
+        <Route path="time-clock" element={<TimeClock />} />
+        <Route path="attendance" element={<ProtectedRoute adminOnly><Attendance /></ProtectedRoute>} />
 
         <Route path="payments" element={<ProtectedRoute adminOnly><Payments /></ProtectedRoute>} />
         <Route path="invoices" element={<ProtectedRoute adminOnly><Invoices /></ProtectedRoute>} />

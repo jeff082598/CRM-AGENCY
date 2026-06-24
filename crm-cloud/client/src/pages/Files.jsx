@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Upload, Download, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import api from '../api/client.js';
+import api, { downloadAuthedFile } from '../api/client.js';
 
 const CATEGORIES = ['Contract', 'Receipt', 'Invoice', 'Script', 'Audio', 'Video', 'Image', 'Requirement', 'Other'];
 
@@ -82,7 +82,7 @@ export default function Files() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <a href={`/api/files/${f.id}/download`} target="_blank" rel="noreferrer" className="btn-secondary !px-3 !py-1.5"><Download size={14} /></a>
+              <button onClick={() => downloadAuthedFile(`/files/${f.id}/download`, f.file_name)} className="btn-secondary !px-3 !py-1.5"><Download size={14} /></button>
               {isAdmin && (
                 <button onClick={() => handleDelete(f.id)} className="btn-secondary !px-3 !py-1.5 text-red-600"><Trash2 size={14} /></button>
               )}

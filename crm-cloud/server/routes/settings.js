@@ -12,7 +12,7 @@ router.use(requireAuth);
 const BACKUP_TABLES = [
   'users', 'leads', 'lead_activity', 'clients', 'client_activity', 'services',
   'projects', 'tasks', 'payments', 'invoices', 'invoice_items', 'files',
-  'notifications', 'activity_logs',
+  'notifications', 'activity_logs', 'time_entries',
 ];
 
 router.get('/', ah(async (req, res) => {

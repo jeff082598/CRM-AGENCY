@@ -209,6 +209,22 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT
 );
 
+-- ---------- TIME CLOCK (clock in / clock out) ----------
+-- Staff can only INSERT (clock in) and UPDATE their own clock_out (clock
+-- out) via the API — the route layer enforces that they can never edit a
+-- recorded clock_in/clock_out time directly. Only admins can edit/delete
+-- entries (see server/routes/timeclock.js).
+CREATE TABLE IF NOT EXISTS time_entries (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  clock_in TIMESTAMPTZ NOT NULL,
+  clock_out TIMESTAMPTZ,
+  notes TEXT,
+  edited_by_admin BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -228,3 +244,5 @@ CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_files_related ON files(related_type, related_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_activity_entity ON activity_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_time_entries_user ON time_entries(user_id);
+CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in ON time_entries(clock_in);

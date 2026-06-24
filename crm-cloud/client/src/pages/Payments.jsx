@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable.jsx';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import api, { apiErrorMessage } from '../api/client.js';
 
 const STATUSES = ['Unpaid', 'Partially Paid', 'Fully Paid', 'Overdue'];
@@ -20,6 +21,7 @@ export default function Payments() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -51,6 +53,12 @@ export default function Payments() {
     }
   };
 
+  const handleDelete = async () => {
+    await api.delete(`/payments/${confirmDeleteId}`);
+    setConfirmDeleteId(null);
+    load();
+  };
+
   return (
     <div className="space-y-4">
       {summary && (
@@ -80,7 +88,25 @@ export default function Payments() {
           { key: 'amount_paid', label: 'Amount Paid', render: (r) => `₱${Number(r.amount_paid).toLocaleString()}` },
           { key: 'due_date', label: 'Due Date' },
           { key: 'status', label: 'Status', render: (r) => <Badge>{r.status}</Badge> },
+          { key: 'actions', label: '', render: (r) => (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(r.id); }}
+              className="text-ink-400 hover:text-red-600 p-1"
+              title="Delete payment"
+            >
+              <Trash2 size={14} />
+            </button>
+          ) },
         ]}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete this payment?"
+        message="This permanently removes this payment record. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
       />
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Payment Schedule" width="max-w-xl">

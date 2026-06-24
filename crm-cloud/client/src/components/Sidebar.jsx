@@ -13,6 +13,8 @@ import {
   Settings,
   UserCog,
   Layers,
+  Clock,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -23,6 +25,8 @@ const NAV = [
   { to: '/projects', label: 'Projects', icon: Briefcase },
   { to: '/tasks', label: 'Tasks', icon: ClipboardList },
   { to: '/services', label: 'Services', icon: Layers },
+  { to: '/time-clock', label: 'Time Clock', icon: Clock },
+  { to: '/attendance', label: 'Attendance', icon: CalendarClock, adminOnly: true },
   { to: '/payments', label: 'Payments', icon: Wallet, adminOnly: true },
   { to: '/invoices', label: 'Invoices', icon: FileText, adminOnly: true },
   { to: '/files', label: 'Files', icon: FolderOpen },
@@ -40,7 +44,7 @@ export default function Sidebar() {
         <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center font-bold text-white">A</div>
         <div>
           <p className="text-sm font-semibold text-white leading-none">Agency CRM</p>
-          <p className="text-[11px] text-ink-400 leading-none mt-0.5">Offline Desktop Edition</p>
+          <p className="text-[11px] text-ink-400 leading-none mt-0.5">Cloud Edition</p>
         </div>
       </div>
 
@@ -63,7 +67,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="px-4 py-3 text-[11px] text-ink-500 border-t border-white/10">
-        All data stored locally — works fully offline.
+        Shared online workspace — everyone sees the same live data.
       </div>
     </aside>
   );

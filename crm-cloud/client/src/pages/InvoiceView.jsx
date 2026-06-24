@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Printer, Plus } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
-import api, { apiErrorMessage } from '../api/client.js';
+import api, { apiErrorMessage, openAuthedFile } from '../api/client.js';
 
 export default function InvoiceView() {
   const { id } = useParams();
@@ -20,8 +20,6 @@ export default function InvoiceView() {
   useEffect(() => { load(); }, [load]);
 
   if (!invoice) return <div className="text-ink-400 text-sm">Loading…</div>;
-
-  const pdfUrl = `/api/invoices/${id}/pdf`;
 
   const recordPayment = async (e) => {
     e.preventDefault();
@@ -50,8 +48,8 @@ export default function InvoiceView() {
           </div>
           <div className="flex items-center gap-2">
             <Badge>{invoice.status}</Badge>
-            <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary"><Download size={15} /> PDF</a>
-            <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary"><Printer size={15} /> Print</a>
+            <button onClick={() => openAuthedFile(`/invoices/${id}/pdf`)} className="btn-secondary"><Download size={15} /> View / Save PDF</button>
+            <button onClick={() => openAuthedFile(`/invoices/${id}/pdf`)} className="btn-secondary"><Printer size={15} /> Print</button>
             {invoice.status !== 'Fully Paid' && (
               <button className="btn-primary" onClick={() => setShowPay(true)}><Plus size={15} /> Record Payment</button>
             )}
