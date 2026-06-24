@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Plus, FileText, Download, Trash2 } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
+import Modal from '../components/Modal.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import api, { downloadAuthedFile } from '../api/client.js';
 
@@ -14,6 +16,9 @@ export default function ClientProfile() {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('Overview');
   const [note, setNote] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showEditSocial, setShowEditSocial] = useState(false);
+  const [socialForm, setSocialForm] = useState({ facebook_page_link: '', creative_drive_link: '', status: 'Active' });
 
   const load = useCallback(() => {
     api.get(`/clients/${id}/profile`).then((res) => setData(res.data));
@@ -33,11 +38,30 @@ export default function ClientProfile() {
     load();
   };
 
+  const handleDelete = async () => {
+    await api.delete(`/clients/${id}`);
+    navigate('/clients');
+  };
+
+  const saveSocial = async (e) => {
+    e.preventDefault();
+    await api.put(`/clients/${id}`, socialForm);
+    setShowEditSocial(false);
+    load();
+  };
+
   return (
     <div className="space-y-5">
-      <button onClick={() => navigate('/clients')} className="flex items-center gap-1 text-sm text-ink-500 hover:text-ink-700">
-        <ArrowLeft size={15} /> Back to clients
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate('/clients')} className="flex items-center gap-1 text-sm text-ink-500 hover:text-ink-700">
+          <ArrowLeft size={15} /> Back to clients
+        </button>
+        {isAdmin && (
+          <button onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700">
+            <Trash2 size={15} /> Delete Client
+          </button>
+        )}
+      </div>
 
       <div className="card p-5 flex items-start justify-between flex-wrap gap-4">
         <div>
@@ -69,19 +93,55 @@ export default function ClientProfile() {
       </div>
 
       {tab === 'Overview' && (
-        <div className="card p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Notes</h3>
-          <p className="text-sm text-ink-600 dark:text-ink-300 whitespace-pre-wrap">{client.notes || 'No notes yet.'}</p>
-          <div className="grid grid-cols-3 gap-4 pt-2 text-sm">
-            <div><p className="text-ink-400 text-xs">Address</p><p className="text-ink-700 dark:text-ink-200">{client.address || '—'}</p></div>
-            <div><p className="text-ink-400 text-xs">Projects</p><p className="text-ink-700 dark:text-ink-200">{projects.length}</p></div>
-            {isAdmin && (
-              <div><p className="text-ink-400 text-xs">Outstanding Balance</p>
-                <p className="text-ink-700 dark:text-ink-200">
-                  ₱{payments.reduce((s, p) => s + (p.amount_due - p.amount_paid), 0).toLocaleString()}
-                </p>
+        <div className="space-y-4">
+          <div className="card p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Notes</h3>
+            <p className="text-sm text-ink-600 dark:text-ink-300 whitespace-pre-wrap">{client.notes || 'No notes yet.'}</p>
+            <div className="grid grid-cols-3 gap-4 pt-2 text-sm">
+              <div><p className="text-ink-400 text-xs">Address</p><p className="text-ink-700 dark:text-ink-200">{client.address || '—'}</p></div>
+              <div><p className="text-ink-400 text-xs">Projects</p><p className="text-ink-700 dark:text-ink-200">{projects.length}</p></div>
+              {isAdmin && (
+                <div><p className="text-ink-400 text-xs">Outstanding Balance</p>
+                  <p className="text-ink-700 dark:text-ink-200">
+                    ₱{payments.reduce((s, p) => s + (p.amount_due - p.amount_paid), 0).toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Social Media</h3>
+              {isAdmin && (
+                <button onClick={() => {
+                  setSocialForm({
+                    facebook_page_link: client.facebook_page_link || '',
+                    creative_drive_link: client.creative_drive_link || '',
+                    status: client.status || 'Active',
+                  });
+                  setShowEditSocial(true);
+                }} className="text-xs text-brand-600 hover:underline">Edit</button>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-ink-400 text-xs">Facebook Page</p>
+                {client.facebook_page_link
+                  ? <a href={client.facebook_page_link} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline break-all">{client.facebook_page_link}</a>
+                  : <p className="text-ink-700 dark:text-ink-200">—</p>}
               </div>
-            )}
+              <div>
+                <p className="text-ink-400 text-xs">Creative Drive</p>
+                {client.creative_drive_link
+                  ? <a href={client.creative_drive_link} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline break-all">{client.creative_drive_link}</a>
+                  : <p className="text-ink-700 dark:text-ink-200">—</p>}
+              </div>
+              <div>
+                <p className="text-ink-400 text-xs">Status</p>
+                <Badge color={client.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{client.status}</Badge>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -175,6 +235,39 @@ export default function ClientProfile() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this client?"
+        message="This permanently deletes the client AND all of their projects, tasks, payments, and invoices. This cannot be undone."
+        confirmLabel="Delete Everything"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
+
+      <Modal open={showEditSocial} onClose={() => setShowEditSocial(false)} title="Edit Social Media Info">
+        <form onSubmit={saveSocial} className="space-y-3">
+          <div>
+            <label className="label">Facebook Page Link</label>
+            <input className="input" placeholder="https://facebook.com/…" value={socialForm.facebook_page_link} onChange={(e) => setSocialForm({ ...socialForm, facebook_page_link: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Creative Drive Link</label>
+            <input className="input" placeholder="Google Drive, Dropbox, etc." value={socialForm.creative_drive_link} onChange={(e) => setSocialForm({ ...socialForm, creative_drive_link: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select className="input" value={socialForm.status} onChange={(e) => setSocialForm({ ...socialForm, status: e.target.value })}>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-secondary" onClick={() => setShowEditSocial(false)}>Cancel</button>
+            <button type="submit" className="btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

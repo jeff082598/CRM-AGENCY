@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LayoutGrid, List, Search, Calendar } from 'lucide-react';
+import { Plus, LayoutGrid, List, Search, Calendar, Settings2, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable.jsx';
 import KanbanBoard from '../components/KanbanBoard.jsx';
 import CalendarView from '../components/CalendarView.jsx';
@@ -9,8 +9,8 @@ import Modal from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import api, { apiErrorMessage } from '../api/client.js';
 
-const STATUSES = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+const DEFAULT_STATUSES = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
 
 const EMPTY = {
   project_name: '', client_id: '', service_id: '', assigned_staff_id: '',
@@ -24,13 +24,27 @@ export default function Projects() {
   const [clients, setClients] = useState([]);
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
+  const [statuses, setStatuses] = useState(DEFAULT_STATUSES);
   const [view, setView] = useState('kanban');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showManageStatuses, setShowManageStatuses] = useState(false);
+  const [newStatusName, setNewStatusName] = useState('');
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+
+  const loadStatuses = useCallback(() => {
+    api.get('/settings').then((res) => {
+      try {
+        const list = JSON.parse(res.data.project_statuses || '[]');
+        setStatuses(list.length ? list : DEFAULT_STATUSES);
+      } catch {
+        setStatuses(DEFAULT_STATUSES);
+      }
+    });
+  }, []);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -41,12 +55,21 @@ export default function Projects() {
   }, [search, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadStatuses(); }, [loadStatuses]);
 
   useEffect(() => {
     api.get('/clients').then((res) => setClients(res.data));
     api.get('/services').then((res) => setServices(res.data));
     if (isAdmin) api.get('/users').then((res) => setStaff(res.data.filter((u) => u.role === 'staff' && u.active)));
   }, [isAdmin]);
+
+  // Never hide a project whose status was removed from the managed list —
+  // show a column for it anyway, alongside the official list.
+  const allColumnKeys = useMemo(() => {
+    const fromData = projects.map((p) => p.status).filter(Boolean);
+    const extra = fromData.filter((s) => !statuses.includes(s));
+    return [...statuses, ...Array.from(new Set(extra))];
+  }, [statuses, projects]);
 
   const handleMove = async (project, newStatus) => {
     setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, status: newStatus } : p)));
@@ -66,7 +89,33 @@ export default function Projects() {
     }
   };
 
-  const columns = STATUSES.map((s) => ({ key: s, label: s }));
+  const saveStatuses = async (updated) => {
+    setStatuses(updated);
+    await api.put('/settings', { project_statuses: JSON.stringify(updated) });
+  };
+
+  const addStatus = async () => {
+    const name = newStatusName.trim();
+    if (!name) return;
+    if (statuses.some((s) => s.toLowerCase() === name.toLowerCase())) {
+      setError('That status already exists.');
+      return;
+    }
+    setError('');
+    await saveStatuses([...statuses, name]);
+    setNewStatusName('');
+  };
+
+  const removeStatus = async (name) => {
+    const inUseCount = projects.filter((p) => p.status === name).length;
+    if (inUseCount > 0) {
+      const ok = window.confirm(`${inUseCount} project(s) currently have the status "${name}". Removing it from the list won't change those projects, but it won't be offered as an option going forward. Continue?`);
+      if (!ok) return;
+    }
+    await saveStatuses(statuses.filter((s) => s !== name));
+  };
+
+  const columns = allColumnKeys.map((s) => ({ key: s, label: s }));
 
   return (
     <div className="space-y-4">
@@ -78,8 +127,13 @@ export default function Projects() {
           </div>
           <select className="input w-44" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            {allColumnKeys.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+          {isAdmin && (
+            <button className="btn-secondary" onClick={() => setShowManageStatuses(true)} title="Add or remove statuses">
+              <Settings2 size={15} /> Manage Statuses
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-ink-200 dark:border-ink-700 overflow-hidden">
@@ -188,7 +242,7 @@ export default function Projects() {
             <div>
               <label className="label">Status</label>
               <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                {statuses.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
@@ -205,6 +259,28 @@ export default function Projects() {
             <button type="submit" className="btn-primary">Create Project</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={showManageStatuses} onClose={() => setShowManageStatuses(false)} title="Manage Project Statuses">
+        <p className="text-sm text-ink-500 mb-3">
+          These are your project workflow steps — add or remove them to match how your agency actually works.
+        </p>
+        {error && <div className="rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2 mb-3">{error}</div>}
+        <form onSubmit={(e) => { e.preventDefault(); addStatus(); }} className="flex gap-2 mb-3">
+          <input className="input flex-1" placeholder="New status name…" value={newStatusName} onChange={(e) => setNewStatusName(e.target.value)} />
+          <button type="submit" className="btn-primary"><Plus size={15} /> Add</button>
+        </form>
+        <div className="space-y-1 max-h-72 overflow-y-auto">
+          {statuses.map((s) => (
+            <div key={s} className="flex items-center justify-between px-3 py-2 rounded-lg bg-ink-50 dark:bg-ink-800">
+              <span className="text-sm text-ink-700 dark:text-ink-200">{s}</span>
+              <button onClick={() => removeStatus(s)} className="text-ink-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end pt-3">
+          <button type="button" className="btn-secondary" onClick={() => setShowManageStatuses(false)}>Done</button>
+        </div>
       </Modal>
     </div>
   );

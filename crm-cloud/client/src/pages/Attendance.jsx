@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
@@ -91,6 +91,36 @@ export default function Attendance() {
     load();
   };
 
+  const downloadCsv = () => {
+    if (!entries.length) return;
+    const headers = ['Staff', 'Clock In', 'Clock Out', 'Total Hours', 'Met Target', 'Late Minutes', 'Edited By Admin', 'Notes'];
+    const escape = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = entries.map((e) => [
+      e.staff_name,
+      formatDateTime(e.clock_in),
+      e.clock_out ? formatDateTime(e.clock_out) : 'In progress',
+      e.total_hours ?? '',
+      e.total_hours !== null ? (e.met_target ? 'Yes' : 'No') : '',
+      e.late_minutes,
+      e.edited_by_admin ? 'Yes' : 'No',
+      e.notes || '',
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `attendance-log-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -111,6 +141,12 @@ export default function Attendance() {
           {staff.map((u) => <option key={u.id} value={u.id}>{u.full_name}</option>)}
         </select>
         <button className="btn-primary" onClick={openNew}><Plus size={16} /> Add Entry</button>
+      </div>
+
+      <div className="flex justify-end">
+        <button className="btn-secondary" onClick={downloadCsv} disabled={!entries.length}>
+          <Download size={15} /> Download Attendance Logs
+        </button>
       </div>
 
       <div className="card overflow-x-auto">

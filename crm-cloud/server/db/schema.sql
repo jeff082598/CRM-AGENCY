@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS clients (
   date_joined DATE NOT NULL DEFAULT CURRENT_DATE,
   notes TEXT,
   source_lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+  facebook_page_link TEXT,
+  creative_drive_link TEXT,
+  status TEXT NOT NULL DEFAULT 'Active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -96,7 +99,7 @@ CREATE TABLE IF NOT EXISTS projects (
   start_date DATE,
   due_date DATE,
   priority TEXT NOT NULL CHECK (priority IN ('Low','Medium','High','Urgent')) DEFAULT 'Medium',
-  status TEXT NOT NULL CHECK (status IN ('New Lead','Proposal Sent','Waiting Approval','Pending','Ongoing','On Hold','Completed','Cancelled')) DEFAULT 'Pending',
+  status TEXT NOT NULL DEFAULT 'Pending', -- valid values are admin-managed via settings.project_statuses, not enforced here
   percent_complete INTEGER NOT NULL DEFAULT 0,
   total_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
   notes TEXT,
@@ -225,6 +228,53 @@ CREATE TABLE IF NOT EXISTS time_entries (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ---------- SOCIAL MEDIA CONTENT CALENDAR ----------
+-- Categories and color labels are admin-managed lists stored in settings
+-- (settings.content_categories, settings.content_colors), same pattern as
+-- settings.lead_categories and settings.project_statuses elsewhere in this
+-- app — fully editable, not a fixed enum.
+CREATE TABLE IF NOT EXISTS content_posts (
+  id SERIAL PRIMARY KEY,
+  client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  post_date DATE NOT NULL,
+  posting_time TEXT, -- 'HH:MM', free-form to keep timezone handling simple
+  title TEXT NOT NULL,
+  description TEXT,
+  hashtags TEXT,
+  category TEXT,
+  color_label TEXT, -- a name from settings.content_colors, e.g. 'Urgent'
+  status TEXT NOT NULL DEFAULT 'Draft', -- Draft | Pending Approval | Approved | Scheduled | Posted
+  assigned_staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  thumbnail_file_id INTEGER REFERENCES files(id) ON DELETE SET NULL,
+  quick_notes TEXT,
+  internal_notes TEXT,
+  client_feedback_notes TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS post_tasks (
+  id SERIAL PRIMARY KEY,
+  post_id INTEGER NOT NULL REFERENCES content_posts(id) ON DELETE CASCADE,
+  task_name TEXT NOT NULL,
+  assigned_staff_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'Pending', -- Pending | In Progress | Completed
+  due_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS post_approval_history (
+  id SERIAL PRIMARY KEY,
+  post_id INTEGER NOT NULL REFERENCES content_posts(id) ON DELETE CASCADE,
+  action TEXT NOT NULL, -- e.g. 'submitted_for_review', 'approved', 'revision_requested', 'scheduled', 'posted'
+  notes TEXT,
+  performed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -246,3 +296,26 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_r
 CREATE INDEX IF NOT EXISTS idx_activity_entity ON activity_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_time_entries_user ON time_entries(user_id);
 CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in ON time_entries(clock_in);
+CREATE INDEX IF NOT EXISTS idx_content_posts_client ON content_posts(client_id);
+CREATE INDEX IF NOT EXISTS idx_content_posts_date ON content_posts(post_date);
+CREATE INDEX IF NOT EXISTS idx_content_posts_status ON content_posts(status);
+CREATE INDEX IF NOT EXISTS idx_content_posts_staff ON content_posts(assigned_staff_id);
+CREATE INDEX IF NOT EXISTS idx_post_tasks_post ON post_tasks(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_approval_post ON post_approval_history(post_id);
+
+-- ============================================================
+-- MIGRATIONS — these run every time the app boots (idempotent, safe to
+-- repeat). They exist to bring an ALREADY-DEPLOYED database in line with
+-- schema changes made after the initial deploy; a brand-new install never
+-- hits the "before" state these are fixing, so they're harmless no-ops there.
+-- ============================================================
+
+-- Project status used to be a fixed CHECK-constrained enum; it's now a
+-- free-form value whose valid options are admin-managed in
+-- settings.project_statuses instead (see server/routes/projects.js).
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;
+
+-- Social media management fields added to the existing clients table.
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS facebook_page_link TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS creative_drive_link TEXT;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Active';

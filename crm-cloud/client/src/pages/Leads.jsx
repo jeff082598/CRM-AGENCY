@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LayoutGrid, List, Search } from 'lucide-react';
+import { Plus, LayoutGrid, List, Search, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable.jsx';
 import KanbanBoard from '../components/KanbanBoard.jsx';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import api, { apiErrorMessage } from '../api/client.js';
 
 const STAGES = ['New Inquiry', 'Follow-Up Needed', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
@@ -12,6 +14,7 @@ const SOURCES = ['Referral', 'Facebook', 'Instagram', 'Website', 'Walk-in', 'Oth
 
 export default function Leads() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [leads, setLeads] = useState([]);
   const [view, setView] = useState('kanban');
   const [search, setSearch] = useState('');
@@ -19,6 +22,7 @@ export default function Leads() {
   const [form, setForm] = useState({ full_name: '', company_name: '', contact_person: '', phone: '', email: '', address: '', source: '', notes: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -46,6 +50,12 @@ export default function Leads() {
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not create lead.'));
     }
+  };
+
+  const handleDelete = async () => {
+    await api.delete(`/leads/${confirmDeleteId}`);
+    setConfirmDeleteId(null);
+    load();
   };
 
   const columns = STAGES.map((s) => ({ key: s, label: s }));
@@ -90,10 +100,23 @@ export default function Leads() {
           groupBy="stage"
           onMove={handleMove}
           renderCard={(lead) => (
-            <div onClick={() => navigate(`/leads/${lead.id}`)}>
-              <p className="font-medium text-sm text-ink-800 dark:text-ink-100">{lead.full_name}</p>
-              {lead.company_name && <p className="text-xs text-ink-500">{lead.company_name}</p>}
-              <p className="text-xs text-ink-400 mt-1">{lead.phone || lead.email}</p>
+            <div>
+              <div className="flex items-start justify-between">
+                <div onClick={() => navigate(`/leads/${lead.id}`)} className="flex-1">
+                  <p className="font-medium text-sm text-ink-800 dark:text-ink-100">{lead.full_name}</p>
+                  {lead.company_name && <p className="text-xs text-ink-500">{lead.company_name}</p>}
+                  <p className="text-xs text-ink-400 mt-1">{lead.phone || lead.email}</p>
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(lead.id); }}
+                    className="text-ink-400 hover:text-red-600 p-1 -mt-1 -mr-1"
+                    title="Delete lead"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           )}
         />
@@ -109,6 +132,15 @@ export default function Leads() {
             { key: 'email', label: 'Email' },
             { key: 'source', label: 'Source' },
             { key: 'stage', label: 'Stage', render: (r) => <Badge>{r.stage}</Badge> },
+            ...(isAdmin ? [{ key: 'actions', label: '', render: (r) => (
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(r.id); }}
+                className="text-ink-400 hover:text-red-600 p-1"
+                title="Delete lead"
+              >
+                <Trash2 size={14} />
+              </button>
+            ) }] : []),
           ]}
         />
       )}
@@ -161,6 +193,15 @@ export default function Leads() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete this lead?"
+        message="This permanently removes this lead and its communication log. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

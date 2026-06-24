@@ -145,8 +145,9 @@ router.put('/:id', ah(async (req, res) => {
 
 router.patch('/:id/status', ah(async (req, res) => {
   const { status } = req.body;
-  const valid = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
-  if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status.' });
+  if (!status || typeof status !== 'string' || !status.trim()) {
+    return res.status(400).json({ error: 'A status value is required.' });
+  }
 
   await pool.query(`UPDATE projects SET status = $1, updated_at = NOW() WHERE id = $2`, [status, req.params.id]);
   await logActivity({ userId: req.user.id, action: 'project.status_changed', entityType: 'project', entityId: Number(req.params.id), details: { status } });

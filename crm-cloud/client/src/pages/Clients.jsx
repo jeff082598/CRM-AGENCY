@@ -1,18 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable.jsx';
+import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import api, { apiErrorMessage } from '../api/client.js';
 
 export default function Clients() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [clients, setClients] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ full_name: '', company_name: '', contact_person: '', phone: '', email: '', address: '', notes: '' });
+  const [form, setForm] = useState({ full_name: '', company_name: '', contact_person: '', phone: '', email: '', address: '', notes: '', facebook_page_link: '', creative_drive_link: '', status: 'Active' });
   const [error, setError] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -30,11 +35,17 @@ export default function Clients() {
     try {
       const res = await api.post('/clients', form);
       setShowAdd(false);
-      setForm({ full_name: '', company_name: '', contact_person: '', phone: '', email: '', address: '', notes: '' });
+      setForm({ full_name: '', company_name: '', contact_person: '', phone: '', email: '', address: '', notes: '', facebook_page_link: '', creative_drive_link: '', status: 'Active' });
       navigate(`/clients/${res.data.id}`);
     } catch (err) {
       setError(apiErrorMessage(err, 'Could not create client.'));
     }
+  };
+
+  const handleDelete = async () => {
+    await api.delete(`/clients/${confirmDeleteId}`);
+    setConfirmDeleteId(null);
+    load();
   };
 
   return (
@@ -59,7 +70,28 @@ export default function Clients() {
           { key: 'phone', label: 'Phone' },
           { key: 'email', label: 'Email' },
           { key: 'date_joined', label: 'Date Joined' },
+          { key: 'status', label: 'Status', render: (r) => (
+            <Badge color={r.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{r.status}</Badge>
+          ) },
+          ...(isAdmin ? [{ key: 'actions', label: '', render: (r) => (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(r.id); }}
+              className="text-ink-400 hover:text-red-600 p-1"
+              title="Delete client"
+            >
+              <Trash2 size={14} />
+            </button>
+          ) }] : []),
         ]}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete this client?"
+        message="This permanently deletes the client AND all of their projects, tasks, payments, and invoices. This cannot be undone."
+        confirmLabel="Delete Everything"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
       />
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Client">
@@ -92,6 +124,23 @@ export default function Clients() {
           <div>
             <label className="label">Address</label>
             <input className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Facebook Page Link</label>
+              <input className="input" placeholder="https://facebook.com/…" value={form.facebook_page_link} onChange={(e) => setForm({ ...form, facebook_page_link: e.target.value })} />
+            </div>
+            <div>
+              <label className="label">Creative Drive Link</label>
+              <input className="input" placeholder="Google Drive, Dropbox, etc." value={form.creative_drive_link} onChange={(e) => setForm({ ...form, creative_drive_link: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="label">Status</label>
+            <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
           <div>
             <label className="label">Notes</label>

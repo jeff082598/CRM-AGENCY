@@ -1,19 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, List, Calendar } from 'lucide-react';
+import { LayoutGrid, List, Calendar, Trash2 } from 'lucide-react';
 import DataTable from '../components/DataTable.jsx';
 import KanbanBoard from '../components/KanbanBoard.jsx';
 import CalendarView from '../components/CalendarView.jsx';
 import Badge from '../components/Badge.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import api from '../api/client.js';
 
 const STATUSES = ['Pending', 'Ongoing', 'Completed'];
 
 export default function Tasks() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [view, setView] = useState('kanban');
   const [loading, setLoading] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -28,6 +32,12 @@ export default function Tasks() {
   const handleMove = async (task, newStatus) => {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t)));
     await api.patch(`/tasks/${task.id}/status`, { status: newStatus });
+  };
+
+  const handleDelete = async () => {
+    await api.delete(`/tasks/${confirmDeleteId}`);
+    setConfirmDeleteId(null);
+    load();
   };
 
   const columns = STATUSES.map((s) => ({ key: s, label: s }));
@@ -74,9 +84,27 @@ export default function Tasks() {
             { key: 'staff_name', label: 'Staff', render: (r) => r.staff_name || '—' },
             { key: 'due_date', label: 'Due Date' },
             { key: 'status', label: 'Status', render: (r) => <Badge>{r.status}</Badge> },
+            ...(isAdmin ? [{ key: 'actions', label: '', render: (r) => (
+              <button
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(r.id); }}
+                className="text-ink-400 hover:text-red-600 p-1"
+                title="Delete task"
+              >
+                <Trash2 size={14} />
+              </button>
+            ) }] : []),
           ]}
         />
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete this task?"
+        message="This permanently removes this task. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

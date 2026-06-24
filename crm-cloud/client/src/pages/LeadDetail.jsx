@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserCheck, Plus } from 'lucide-react';
+import { ArrowLeft, UserCheck, Plus, Trash2 } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import api, { apiErrorMessage } from '../api/client.js';
 
 const STAGES = ['New Inquiry', 'Follow-Up Needed', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
@@ -9,12 +11,14 @@ const STAGES = ['New Inquiry', 'Follow-Up Needed', 'Proposal Sent', 'Negotiation
 export default function LeadDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [lead, setLead] = useState(null);
   const [noteContent, setNoteContent] = useState('');
   const [noteType, setNoteType] = useState('note');
   const [followUpDate, setFollowUpDate] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(() => {
     api.get(`/leads/${id}`).then((res) => setLead(res.data));
@@ -50,11 +54,23 @@ export default function LeadDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    await api.delete(`/leads/${id}`);
+    navigate('/leads');
+  };
+
   return (
     <div className="space-y-5 max-w-4xl">
-      <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-sm text-ink-500 hover:text-ink-700">
-        <ArrowLeft size={15} /> Back to leads
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-sm text-ink-500 hover:text-ink-700">
+          <ArrowLeft size={15} /> Back to leads
+        </button>
+        {isAdmin && (
+          <button onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 text-sm text-red-600 hover:text-red-700">
+            <Trash2 size={15} /> Delete Lead
+          </button>
+        )}
+      </div>
 
       {error && <div className="rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2">{error}</div>}
 
@@ -139,6 +155,15 @@ export default function LeadDetail() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete this lead?"
+        message="This permanently removes this lead and its communication log. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

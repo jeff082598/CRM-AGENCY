@@ -138,6 +138,7 @@ router.post('/:id/convert', ah(async (req, res) => {
 }));
 
 router.delete('/:id', ah(async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
   await pool.query('DELETE FROM leads WHERE id = $1', [req.params.id]);
   await logActivity({ userId: req.user.id, action: 'lead.deleted', entityType: 'lead', entityId: Number(req.params.id) });
   res.json({ ok: true });

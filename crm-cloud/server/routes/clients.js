@@ -65,13 +65,13 @@ router.get('/:id/profile', ah(async (req, res) => {
 }));
 
 router.post('/', ah(async (req, res) => {
-  const { full_name, company_name, contact_person, phone, email, address, notes, date_joined } = req.body;
+  const { full_name, company_name, contact_person, phone, email, address, notes, date_joined, facebook_page_link, creative_drive_link, status } = req.body;
   if (!full_name) return res.status(400).json({ error: 'full_name is required.' });
 
   const { rows } = await pool.query(
-    `INSERT INTO clients (full_name, company_name, contact_person, phone, email, address, notes, date_joined)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8, CURRENT_DATE)) RETURNING id`,
-    [full_name, company_name, contact_person, phone, email, address, notes, date_joined || null]
+    `INSERT INTO clients (full_name, company_name, contact_person, phone, email, address, notes, date_joined, facebook_page_link, creative_drive_link, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,COALESCE($8, CURRENT_DATE),$9,$10,COALESCE($11,'Active')) RETURNING id`,
+    [full_name, company_name, contact_person, phone, email, address, notes, date_joined || null, facebook_page_link || null, creative_drive_link || null, status || null]
   );
 
   await logActivity({ userId: req.user.id, action: 'client.created', entityType: 'client', entityId: rows[0].id });
@@ -82,7 +82,7 @@ router.put('/:id', ah(async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM clients WHERE id = $1', [req.params.id]);
   if (!rows[0]) return res.status(404).json({ error: 'Client not found.' });
 
-  const fields = ['full_name', 'company_name', 'contact_person', 'phone', 'email', 'address', 'notes', 'date_joined'];
+  const fields = ['full_name', 'company_name', 'contact_person', 'phone', 'email', 'address', 'notes', 'date_joined', 'facebook_page_link', 'creative_drive_link', 'status'];
   const updates = {};
   for (const f of fields) if (req.body[f] !== undefined) updates[f] = req.body[f];
   if (Object.keys(updates).length === 0) return res.json({ ok: true });
@@ -112,6 +112,7 @@ router.post('/:id/activity', ah(async (req, res) => {
 }));
 
 router.delete('/:id', ah(async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
   await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
   await logActivity({ userId: req.user.id, action: 'client.deleted', entityType: 'client', entityId: Number(req.params.id) });
   res.json({ ok: true });

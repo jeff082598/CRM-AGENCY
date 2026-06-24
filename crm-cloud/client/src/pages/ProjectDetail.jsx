@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Upload, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, Download, Trash2 } from 'lucide-react';
 import Badge from '../components/Badge.jsx';
 import Modal from '../components/Modal.jsx';
+import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import api, { apiErrorMessage, downloadAuthedFile } from '../api/client.js';
 
-const STATUSES = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
+const DEFAULT_STATUSES = ['New Lead', 'Proposal Sent', 'Waiting Approval', 'Pending', 'Ongoing', 'On Hold', 'Completed', 'Cancelled'];
 const TASK_STATUSES = ['Pending', 'Ongoing', 'Completed'];
 const FILE_CATEGORIES = ['Contract', 'Receipt', 'Invoice', 'Script', 'Audio', 'Video', 'Image', 'Requirement', 'Other'];
 
@@ -15,12 +16,14 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { isAdmin, user } = useAuth();
   const [project, setProject] = useState(null);
+  const [statuses, setStatuses] = useState(DEFAULT_STATUSES);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [staff, setStaff] = useState([]);
   const [taskForm, setTaskForm] = useState({ task_name: '', description: '', assigned_staff_id: '', due_date: '', notes: '' });
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const [uploadCategory, setUploadCategory] = useState('Other');
+  const [confirmDeleteTaskId, setConfirmDeleteTaskId] = useState(null);
 
   const load = useCallback(() => {
     api.get(`/projects/${id}`).then((res) => setProject(res.data));
@@ -28,8 +31,22 @@ export default function ProjectDetail() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (isAdmin) api.get('/users').then((res) => setStaff(res.data.filter((u) => u.role === 'staff'))); }, [isAdmin]);
+  useEffect(() => {
+    api.get('/settings').then((res) => {
+      try {
+        const list = JSON.parse(res.data.project_statuses || '[]');
+        setStatuses(list.length ? list : DEFAULT_STATUSES);
+      } catch {
+        setStatuses(DEFAULT_STATUSES);
+      }
+    });
+  }, []);
 
   if (!project) return <div className="text-ink-400 text-sm">Loading…</div>;
+
+  // Don't hide the project's current status from the dropdown even if it
+  // was since removed from the managed list — same logic as the Projects list.
+  const statusOptions = statuses.includes(project.status) ? statuses : [...statuses, project.status];
 
   const canEditFull = isAdmin;
   const canUpdateProgress = isAdmin || project.assigned_staff_id === user.id;
@@ -62,6 +79,12 @@ export default function ProjectDetail() {
     load();
   };
 
+  const handleDeleteTask = async () => {
+    await api.delete(`/tasks/${confirmDeleteTaskId}`);
+    setConfirmDeleteTaskId(null);
+    load();
+  };
+
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -90,7 +113,7 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-2">
             <Badge>{project.priority}</Badge>
             <select className="input w-44" value={project.status} onChange={(e) => updateStatus(e.target.value)}>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {statusOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
@@ -140,9 +163,16 @@ export default function ProjectDetail() {
                 <p className="text-sm font-medium text-ink-700 dark:text-ink-200">{t.task_name}</p>
                 <p className="text-xs text-ink-400">{t.staff_name || 'Unassigned'} {t.due_date && `· due ${t.due_date}`}</p>
               </div>
-              <select className="input w-32 !py-1 !text-xs" value={t.status} onChange={(e) => updateTaskStatus(t.id, e.target.value)}>
-                {TASK_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <div className="flex items-center gap-2">
+                <select className="input w-32 !py-1 !text-xs" value={t.status} onChange={(e) => updateTaskStatus(t.id, e.target.value)}>
+                  {TASK_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                {canEditFull && (
+                  <button onClick={() => setConfirmDeleteTaskId(t.id)} className="text-ink-400 hover:text-red-600 p-1" title="Delete task">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -220,6 +250,15 @@ export default function ProjectDetail() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmDeleteTaskId}
+        title="Delete this task?"
+        message="This permanently removes this task. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteTask}
+        onCancel={() => setConfirmDeleteTaskId(null)}
+      />
     </div>
   );
 }

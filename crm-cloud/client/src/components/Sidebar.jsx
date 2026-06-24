@@ -15,6 +15,8 @@ import {
   Layers,
   Clock,
   CalendarClock,
+  CalendarDays,
+  PieChart,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 
@@ -25,6 +27,11 @@ const NAV = [
   { to: '/projects', label: 'Projects', icon: Briefcase },
   { to: '/tasks', label: 'Tasks', icon: ClipboardList },
   { to: '/services', label: 'Services', icon: Layers },
+  { section: 'Social Media' },
+  { to: '/social', label: 'Social Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/social/calendar', label: 'Content Calendar', icon: CalendarDays },
+  { to: '/social/reports', label: 'Content Reports', icon: PieChart },
+  { section: 'Operations' },
   { to: '/time-clock', label: 'Time Clock', icon: Clock },
   { to: '/attendance', label: 'Attendance', icon: CalendarClock, adminOnly: true },
   { to: '/payments', label: 'Payments', icon: Wallet, adminOnly: true },
@@ -49,21 +56,31 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {NAV.filter((item) => !item.adminOnly || isAdmin).map(({ to, label, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive ? 'bg-brand-600 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
-              }`
-            }
-          >
-            <Icon size={17} />
-            {label}
-          </NavLink>
-        ))}
+        {NAV.filter((item) => !item.adminOnly || isAdmin).map((item, idx) => {
+          if (item.section) {
+            return (
+              <p key={`section-${idx}`} className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                {item.section}
+              </p>
+            );
+          }
+          const { to, label, icon: Icon, end } = item;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive ? 'bg-brand-600 text-white' : 'text-ink-300 hover:bg-white/5 hover:text-white'
+                }`
+              }
+            >
+              <Icon size={17} />
+              {label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className="px-4 py-3 text-[11px] text-ink-500 border-t border-white/10">

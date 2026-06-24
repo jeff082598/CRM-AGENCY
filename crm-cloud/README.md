@@ -16,7 +16,37 @@ That walks through everything: a free database (Neon), free hosting
 
 ## What changed from the desktop edition
 
-- **Time Clock / Attendance (new):** every staff member gets a "Time Clock"
+- **Social Media Management module (new):** a full content calendar system
+  for managing client social media — a monthly drag-and-drop calendar,
+  per-post approval workflow (Draft → Pending Approval → Approved →
+  Scheduled → Posted, with full history), tasks per post, admin-editable
+  categories and color labels, a client profile panel beside the calendar,
+  a dedicated dashboard (today's posts, this week, overdue tasks, pending
+  approvals), and reports (posts published, categories used, posting
+  frequency, monthly summary) with CSV/Excel export. Existing clients
+  gained Facebook Page Link, Creative Drive Link, and Active/Inactive
+  status fields rather than creating a second, disconnected client list.
+  Real-time push updates across multiple people's screens at once
+  (websockets) and PDF report export weren't included in this pass — both
+  are addable later if you want them; for now, every action reflects
+  immediately for the person doing it, same as the rest of the app.
+- **Delete options added:** admins can now delete leads, clients, and
+  tasks directly from the UI (each with a confirmation prompt). Deleting
+  a client also removes all of that client's projects, tasks, payments,
+  and invoices — the warning dialog says so explicitly before it happens.
+- **Project statuses are now admin-managed**, not fixed. "Manage
+  Statuses" on the Projects page lets you add or remove workflow steps
+  (the kanban columns) to match how your agency actually works — the
+  original 8 (New Lead, Proposal Sent, etc.) are just the starting point,
+  not a hardcoded list anymore. Removing a status never hides existing
+  projects that still have it.
+- **File downloads fixed.** Every download/view link (Files, a client's
+  Files tab, a project's Files section, invoice PDF/Print) was a plain
+  link pointing at a route that requires login — which a plain link can't
+  carry. They now properly fetch with your session attached.
+- **Payments can be deleted** from the Payments table (trash icon per row).
+- **Attendance logs can be exported** to CSV from the Attendance page.
+- **Time Clock / Attendance:** every staff member gets a "Time Clock"
   page with just a Clock In / Clock Out button and a read-only history of
   their own hours — they cannot edit a recorded time themselves, by
   design. Admins get an "Attendance" page showing everyone's hours, with
