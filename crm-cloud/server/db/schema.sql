@@ -274,6 +274,32 @@ CREATE TABLE IF NOT EXISTS post_approval_history (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ---------- CHAT / MESSAGING ----------
+CREATE TABLE IF NOT EXISTS chat_conversations (
+  id SERIAL PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('dm', 'group')),
+  name TEXT, -- only used for group conversations
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS chat_participants (
+  conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_read_at TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01',
+  PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id SERIAL PRIMARY KEY,
+  conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+  sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  content TEXT NOT NULL,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 -- ============================================================
 -- INDEXES
@@ -304,32 +330,6 @@ CREATE INDEX IF NOT EXISTS idx_post_tasks_post ON post_tasks(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_approval_post ON post_approval_history(post_id);
 CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON chat_participants(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(conversation_id, created_at);
-
--- ---------- CHAT / MESSAGING ----------
-CREATE TABLE IF NOT EXISTS chat_conversations (
-  id SERIAL PRIMARY KEY,
-  type TEXT NOT NULL CHECK (type IN ('dm', 'group')),
-  name TEXT, -- only used for group conversations
-  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS chat_participants (
-  conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  last_read_at TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01',
-  PRIMARY KEY (conversation_id, user_id)
-);
-
-CREATE TABLE IF NOT EXISTS chat_messages (
-  id SERIAL PRIMARY KEY,
-  conversation_id INTEGER NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
-  sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-  content TEXT NOT NULL,
-  deleted_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 
 -- ============================================================
 -- MIGRATIONS — these run every time the app boots (idempotent, safe to
