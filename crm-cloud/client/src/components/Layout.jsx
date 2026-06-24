@@ -5,6 +5,7 @@ import Topbar from './Topbar.jsx';
 
 const TITLES = {
   '/': 'Dashboard',
+  '/messages': 'Messages',
   '/leads': 'Leads',
   '/clients': 'Clients',
   '/projects': 'Projects',

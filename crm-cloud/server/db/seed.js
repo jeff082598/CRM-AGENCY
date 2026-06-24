@@ -73,6 +73,26 @@ async function seed() {
       [k, v]
     );
   }
+
+  // A default "Team Chat" group so chat isn't empty on first use — everyone
+  // who exists at seed time gets added; new users created later are added
+  // to it automatically too (see server/routes/users.js).
+  const { rows: teamChatRows } = await pool.query(
+    `SELECT id FROM chat_conversations WHERE type = 'group' AND name = 'Team Chat'`
+  );
+  if (teamChatRows.length === 0) {
+    const { rows: convRows } = await pool.query(
+      `INSERT INTO chat_conversations (type, name) VALUES ('group', 'Team Chat') RETURNING id`
+    );
+    const teamChatId = convRows[0].id;
+    const { rows: allUsers } = await pool.query('SELECT id FROM users');
+    for (const u of allUsers) {
+      await pool.query(
+        `INSERT INTO chat_participants (conversation_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+        [teamChatId, u.id]
+      );
+    }
+  }
 }
 
 module.exports = { seed };

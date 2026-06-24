@@ -25,6 +25,7 @@ import Attendance from './pages/Attendance.jsx';
 import SocialDashboard from './pages/SocialDashboard.jsx';
 import ContentCalendar from './pages/ContentCalendar.jsx';
 import ContentReports from './pages/ContentReports.jsx';
+import Chat from './pages/Chat.jsx';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="messages" element={<Chat />} />
         <Route path="leads" element={<Leads />} />
         <Route path="leads/:id" element={<LeadDetail />} />
         <Route path="clients" element={<Clients />} />

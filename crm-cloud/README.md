@@ -16,6 +16,17 @@ That walks through everything: a free database (Neon), free hosting
 
 ## What changed from the desktop edition
 
+- **Team chat (new):** a "Messages" page for direct messages and group
+  chats between admin and staff, like a lightweight Slack. Everyone
+  starts in a default "Team Chat" group; new staff accounts are added to
+  it automatically. New messages appear within a few seconds while a
+  conversation is open — that's done with short polling (checking every 3
+  seconds), not true instant push (websockets). The practical difference:
+  a few seconds of delay at most, no extra infrastructure needed, and it
+  works reliably on free hosting tiers. If you want zero-delay delivery
+  later, that's a separate upgrade I can build. Not included in this
+  pass: file attachments in chat, typing indicators, read receipts, and
+  message reactions — text messaging only for now.
 - **Social Media Management module (new):** a full content calendar system
   for managing client social media — a monthly drag-and-drop calendar,
   per-post approval workflow (Draft → Pending Approval → Approved →

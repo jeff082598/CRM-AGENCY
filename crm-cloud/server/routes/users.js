@@ -34,6 +34,14 @@ router.post('/', ah(async (req, res) => {
     [username, hash, full_name, email || null, role]
   );
 
+  const { rows: teamChatRows } = await pool.query(`SELECT id FROM chat_conversations WHERE type = 'group' AND name = 'Team Chat'`);
+  if (teamChatRows[0]) {
+    await pool.query(
+      `INSERT INTO chat_participants (conversation_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+      [teamChatRows[0].id, rows[0].id]
+    );
+  }
+
   await logActivity({ userId: req.user.id, action: 'user.created', entityType: 'user', entityId: rows[0].id });
   res.status(201).json({ id: rows[0].id });
 }));

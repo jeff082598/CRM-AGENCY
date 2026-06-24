@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,11 +17,14 @@ import {
   CalendarClock,
   CalendarDays,
   PieChart,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import api from '../api/client.js';
 
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/messages', label: 'Messages', icon: MessageCircle, badge: 'chat' },
   { to: '/leads', label: 'Leads', icon: Target },
   { to: '/clients', label: 'Clients', icon: Users },
   { to: '/projects', label: 'Projects', icon: Briefcase },
@@ -44,6 +47,14 @@ const NAV = [
 
 export default function Sidebar() {
   const { isAdmin } = useAuth();
+  const [unreadChat, setUnreadChat] = useState(0);
+
+  useEffect(() => {
+    const load = () => api.get('/chat/unread-count').then((res) => setUnreadChat(res.data.count)).catch(() => {});
+    load();
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <aside className="w-60 flex-shrink-0 bg-ink-900 text-ink-200 flex flex-col h-full">
@@ -64,7 +75,7 @@ export default function Sidebar() {
               </p>
             );
           }
-          const { to, label, icon: Icon, end } = item;
+          const { to, label, icon: Icon, end, badge } = item;
           return (
             <NavLink
               key={to}
@@ -77,7 +88,10 @@ export default function Sidebar() {
               }
             >
               <Icon size={17} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {badge === 'chat' && unreadChat > 0 && (
+                <span className="bg-red-500 text-white text-[10px] rounded-full px-1.5 leading-tight">{unreadChat > 9 ? '9+' : unreadChat}</span>
+              )}
             </NavLink>
           );
         })}
