@@ -14,7 +14,7 @@ function timeAgo(iso) {
 }
 
 export default function Chat() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -167,16 +167,22 @@ export default function Chat() {
             <div style={{ flex: 1, overflowY: 'auto', padding: 16 }} className="space-y-3">
               {messages.map((m) => {
                 const mine = m.sender_id === user.id;
+                const canDelete = mine || isAdmin;
+                const deleteBtn = (
+                  <button
+                    onClick={() => deleteMessage(m.id)}
+                    className="opacity-0 group-hover:opacity-100 text-ink-300 hover:text-red-500"
+                    title={mine ? 'Delete message' : 'Delete message (admin)'}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                );
                 return (
                   <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                     <div style={{ maxWidth: '70%' }} className="group">
                       {!mine && <p className="text-[11px] text-ink-400 mb-0.5 ml-1">{m.sender_name}</p>}
                       <div className="flex items-end gap-1">
-                        {mine && (
-                          <button onClick={() => deleteMessage(m.id)} className="opacity-0 group-hover:opacity-100 text-ink-300 hover:text-red-500">
-                            <Trash2 size={12} />
-                          </button>
-                        )}
+                        {mine && canDelete && deleteBtn}
                         <div
                           className="rounded-2xl px-3.5 py-2 text-sm"
                           style={mine
@@ -185,6 +191,7 @@ export default function Chat() {
                         >
                           {m.content}
                         </div>
+                        {!mine && canDelete && deleteBtn}
                       </div>
                       <p className={`text-[10px] text-ink-400 mt-0.5 ${mine ? 'text-right mr-1' : 'ml-1'}`}>{timeAgo(m.created_at)}</p>
                     </div>
