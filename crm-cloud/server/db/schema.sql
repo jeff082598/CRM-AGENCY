@@ -300,6 +300,23 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ---------- PERSONAL TASK MANAGER (private per-user to-do list) ----------
+-- Scoped to user_id and gated to admins at the route level (see
+-- server/routes/personalTasks.js) — each admin only ever sees their own.
+CREATE TABLE IF NOT EXISTS personal_tasks (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  notes TEXT,
+  priority TEXT NOT NULL CHECK (priority IN ('High', 'Medium', 'Low')) DEFAULT 'Medium',
+  due_date DATE,
+  completed BOOLEAN NOT NULL DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  archived BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 
 -- ============================================================
 -- INDEXES
@@ -330,6 +347,8 @@ CREATE INDEX IF NOT EXISTS idx_post_tasks_post ON post_tasks(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_approval_post ON post_approval_history(post_id);
 CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON chat_participants(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation ON chat_messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_personal_tasks_user ON personal_tasks(user_id, completed, archived);
+CREATE INDEX IF NOT EXISTS idx_personal_tasks_due ON personal_tasks(due_date);
 
 -- ============================================================
 -- MIGRATIONS — these run every time the app boots (idempotent, safe to

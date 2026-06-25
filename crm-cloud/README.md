@@ -16,6 +16,18 @@ That walks through everything: a free database (Neon), free hosting
 
 ## What changed from the desktop edition
 
+- **My Tasks (new):** a private personal to-do list for the admin —
+  separate from the project/client Tasks system entirely. Add, edit,
+  delete; check a box to mark something done and it moves instantly from
+  "Ongoing Tasks" to "Done Tasks" (and back if unchecked, no refresh
+  needed). Includes priority levels with color coding (red/yellow/green),
+  due dates, search and filtering, sorting by due date/priority/date
+  created, an "Archive" option as an alternative to permanent deletion,
+  a confirmation prompt before any delete, and a stats widget (both on
+  the My Tasks page itself and as a small section on the main Dashboard)
+  showing total/ongoing/completed/overdue counts. Each admin only ever
+  sees their own list — it's private, not shared with staff or other
+  admins.
 - **Team chat (new):** a "Messages" page for direct messages and group
   chats between admin and staff, like a lightweight Slack. Everyone
   starts in a default "Team Chat" group; new staff accounts are added to

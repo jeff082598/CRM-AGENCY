@@ -18,6 +18,7 @@ import {
   CalendarDays,
   PieChart,
   MessageCircle,
+  CheckSquare,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import api from '../api/client.js';
@@ -25,6 +26,7 @@ import api from '../api/client.js';
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/messages', label: 'Messages', icon: MessageCircle, badge: 'chat' },
+  { to: '/my-tasks', label: 'My Tasks', icon: CheckSquare, adminOnly: true },
   { to: '/leads', label: 'Leads', icon: Target },
   { to: '/clients', label: 'Clients', icon: Users },
   { to: '/projects', label: 'Projects', icon: Briefcase },

@@ -32,6 +32,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/timeclock', require('./routes/timeclock'));
 app.use('/api/content', require('./routes/content'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/personal-tasks', require('./routes/personalTasks'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 

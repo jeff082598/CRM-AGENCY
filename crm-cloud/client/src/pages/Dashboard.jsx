@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Target, Users, Briefcase, Clock, CheckCircle2, AlertTriangle,
-  TrendingUp, Wallet, BellRing,
+  TrendingUp, Wallet, BellRing, CheckSquare,
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,14 +15,17 @@ import api from '../api/client.js';
 const PIE_COLORS = ['#4f46e5', '#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [charts, setCharts] = useState(null);
+  const [myTaskStats, setMyTaskStats] = useState(null);
 
   useEffect(() => {
     api.get('/dashboard/stats').then((res) => setStats(res.data));
     if (isAdmin) {
       api.get('/dashboard/charts').then((res) => setCharts(res.data));
+      api.get('/personal-tasks/stats').then((res) => setMyTaskStats(res.data));
     }
   }, [isAdmin]);
 
@@ -64,6 +68,23 @@ export default function Dashboard() {
           />
           <StatCard label="Overdue Payments" value={stats.overdue_payments} icon={AlertTriangle} accent="red" />
           <StatCard label="Upcoming Payments (7 days)" value={stats.upcoming_payments} icon={BellRing} accent="brand" />
+        </div>
+      )}
+
+      {isAdmin && myTaskStats && (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100 flex items-center gap-2">
+              <CheckSquare size={16} className="text-brand-600" /> My Tasks
+            </h3>
+            <button onClick={() => navigate('/my-tasks')} className="text-xs text-brand-600 hover:underline">Open My Tasks →</button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <StatCard label="Total Tasks" value={myTaskStats.total} accent="brand" />
+            <StatCard label="Ongoing" value={myTaskStats.ongoing} accent="brand" />
+            <StatCard label="Completed" value={myTaskStats.completed} accent="emerald" />
+            <StatCard label="Overdue" value={myTaskStats.overdue} accent="red" />
+          </div>
         </div>
       )}
 
