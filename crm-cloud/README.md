@@ -16,6 +16,14 @@ That walks through everything: a free database (Neon), free hosting
 
 ## What changed from the desktop edition
 
+- **Invoices can now be edited** after creation — due date, notes, and
+  line items (the client and project stay fixed once issued, since
+  reassigning those after the fact gets confusing fast). Editing
+  recalculates the total correctly even if a payment was already
+  recorded against the invoice. There's also a quick **"+ New Invoice"**
+  button right on a client's own "Payments & Invoices" tab, so you don't
+  have to leave their profile and hunt for the right client in a dropdown
+  on a separate page.
 - **My Tasks (new):** a private personal to-do list for the admin —
   separate from the project/client Tasks system entirely. Add, edit,
   delete; check a box to mark something done and it moves instantly from

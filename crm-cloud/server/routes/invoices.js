@@ -98,6 +98,50 @@ router.post('/', ah(async (req, res) => {
   }
 }));
 
+router.put('/:id', ah(async (req, res) => {
+  const { due_date, notes, items } = req.body;
+  const { rows } = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
+  const invoice = rows[0];
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found.' });
+
+  if (!items || !items.length) {
+    return res.status(400).json({ error: 'An invoice needs at least one line item.' });
+  }
+
+  const totalAmount = items.reduce((sum, it) => sum + Number(it.quantity || 1) * Number(it.unit_price || 0), 0);
+  const remaining = Math.max(totalAmount - invoice.amount_paid, 0);
+  const status = invoice.amount_paid <= 0 ? 'Unpaid' : remaining <= 0 ? 'Fully Paid' : 'Partially Paid';
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await client.query(
+      `UPDATE invoices SET due_date = $1, notes = $2, total_amount = $3, remaining_balance = $4, status = $5 WHERE id = $6`,
+      [due_date || null, notes || null, totalAmount, remaining, status, req.params.id]
+    );
+
+    await client.query('DELETE FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
+    for (const it of items) {
+      const qty = Number(it.quantity || 1);
+      const price = Number(it.unit_price || 0);
+      await client.query(
+        `INSERT INTO invoice_items (invoice_id, service_id, description, quantity, unit_price, amount) VALUES ($1,$2,$3,$4,$5,$6)`,
+        [req.params.id, it.service_id || null, it.description, qty, price, qty * price]
+      );
+    }
+
+    await client.query('COMMIT');
+    await logActivity({ userId: req.user.id, action: 'invoice.edited', entityType: 'invoice', entityId: Number(req.params.id), details: { total: totalAmount } });
+    res.json({ ok: true, total_amount: totalAmount, remaining_balance: remaining, status });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}));
+
 router.put('/:id/payment', ah(async (req, res) => {
   const { amount_paid } = req.body;
   const { rows } = await pool.query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);

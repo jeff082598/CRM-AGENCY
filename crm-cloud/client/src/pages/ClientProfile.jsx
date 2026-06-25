@@ -19,6 +19,15 @@ export default function ClientProfile() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showEditSocial, setShowEditSocial] = useState(false);
   const [socialForm, setSocialForm] = useState({ facebook_page_link: '', creative_drive_link: '', status: 'Active' });
+  const [showNewInvoice, setShowNewInvoice] = useState(false);
+  const [services, setServices] = useState([]);
+  const [invoiceProjectId, setInvoiceProjectId] = useState('');
+  const [invoiceDueDate, setInvoiceDueDate] = useState('');
+  const [invoiceNotes, setInvoiceNotes] = useState('');
+  const [invoiceItems, setInvoiceItems] = useState([{ description: '', quantity: 1, unit_price: '', service_id: '' }]);
+  const [invoiceError, setInvoiceError] = useState('');
+
+  useEffect(() => { api.get('/services').then((res) => setServices(res.data)); }, []);
 
   const load = useCallback(() => {
     api.get(`/clients/${id}/profile`).then((res) => setData(res.data));
@@ -48,6 +57,48 @@ export default function ClientProfile() {
     await api.put(`/clients/${id}`, socialForm);
     setShowEditSocial(false);
     load();
+  };
+
+  const openNewInvoice = () => {
+    setInvoiceError('');
+    setInvoiceProjectId('');
+    setInvoiceDueDate('');
+    setInvoiceNotes('');
+    setInvoiceItems([{ description: '', quantity: 1, unit_price: '', service_id: '' }]);
+    setShowNewInvoice(true);
+  };
+
+  const addInvoiceRow = () => setInvoiceItems((prev) => [...prev, { description: '', quantity: 1, unit_price: '', service_id: '' }]);
+  const removeInvoiceRow = (idx) => setInvoiceItems((prev) => prev.filter((_, i) => i !== idx));
+  const updateInvoiceRow = (idx, field, value) => setInvoiceItems((prev) => prev.map((it, i) => (i === idx ? { ...it, [field]: value } : it)));
+  const fillInvoiceRowFromService = (idx, serviceId) => {
+    const svc = services.find((s) => String(s.id) === String(serviceId));
+    if (!svc) return;
+    setInvoiceItems((prev) => prev.map((it, i) => (i === idx ? { ...it, description: svc.name, unit_price: svc.standard_price, service_id: svc.id } : it)));
+  };
+  const invoiceTotal = invoiceItems.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
+
+  const createInvoice = async (e) => {
+    e.preventDefault();
+    setInvoiceError('');
+    const cleanItems = invoiceItems.filter((it) => it.description && it.description.trim());
+    if (!cleanItems.length) {
+      setInvoiceError('Add at least one line item.');
+      return;
+    }
+    try {
+      const res = await api.post('/invoices', {
+        client_id: Number(id),
+        project_id: invoiceProjectId || null,
+        due_date: invoiceDueDate || null,
+        notes: invoiceNotes,
+        items: cleanItems,
+      });
+      setShowNewInvoice(false);
+      navigate(`/invoices/${res.data.id}`);
+    } catch (err) {
+      setInvoiceError(err?.response?.data?.error || 'Could not generate invoice.');
+    }
   };
 
   return (
@@ -179,7 +230,10 @@ export default function ClientProfile() {
             </div>
           </div>
           <div className="card">
-            <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100 p-4 border-b border-ink-50 dark:border-ink-700">Invoices</h3>
+            <div className="flex items-center justify-between p-4 border-b border-ink-50 dark:border-ink-700">
+              <h3 className="text-sm font-semibold text-ink-700 dark:text-ink-100">Invoices</h3>
+              <button onClick={openNewInvoice} className="btn-primary !px-3 !py-1.5"><Plus size={14} /> New Invoice</button>
+            </div>
             <div className="divide-y divide-ink-50 dark:divide-ink-700">
               {invoices.length === 0 && <p className="p-4 text-sm text-ink-400">No invoices yet.</p>}
               {invoices.map((inv) => (
@@ -265,6 +319,58 @@ export default function ClientProfile() {
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setShowEditSocial(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={showNewInvoice} onClose={() => setShowNewInvoice(false)} title={`New Invoice — ${client.full_name}`} width="max-w-2xl">
+        <form onSubmit={createInvoice} className="space-y-3">
+          {invoiceError && <div className="rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2">{invoiceError}</div>}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Project (optional)</label>
+              <select className="input" value={invoiceProjectId} onChange={(e) => setInvoiceProjectId(e.target.value)}>
+                <option value="">No specific project</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label">Due Date</label>
+              <input type="date" className="input" value={invoiceDueDate} onChange={(e) => setInvoiceDueDate(e.target.value)} />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Line Items</label>
+            <div className="space-y-2">
+              {invoiceItems.map((it, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <select className="input w-36 !text-xs" value={it.service_id} onChange={(e) => fillInvoiceRowFromService(i, e.target.value)}>
+                    <option value="">From catalog…</option>
+                    {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <input className="input flex-1" placeholder="Description" value={it.description} onChange={(e) => updateInvoiceRow(i, 'description', e.target.value)} />
+                  <input className="input w-16" type="number" min="1" value={it.quantity} onChange={(e) => updateInvoiceRow(i, 'quantity', e.target.value)} />
+                  <input className="input w-28" type="number" min="0" step="0.01" placeholder="Price" value={it.unit_price} onChange={(e) => updateInvoiceRow(i, 'unit_price', e.target.value)} />
+                  <button type="button" onClick={() => removeInvoiceRow(i)} className="text-ink-400 hover:text-red-600 p-2"><Trash2 size={15} /></button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addInvoiceRow} className="text-sm text-brand-600 hover:underline mt-2">+ Add line item</button>
+          </div>
+
+          <div className="text-right text-sm font-semibold text-ink-700 dark:text-ink-100">
+            Total: ₱{invoiceTotal.toLocaleString()}
+          </div>
+
+          <div>
+            <label className="label">Notes</label>
+            <textarea className="input" rows={2} value={invoiceNotes} onChange={(e) => setInvoiceNotes(e.target.value)} />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-secondary" onClick={() => setShowNewInvoice(false)}>Cancel</button>
+            <button type="submit" className="btn-primary">Generate Invoice</button>
           </div>
         </form>
       </Modal>
